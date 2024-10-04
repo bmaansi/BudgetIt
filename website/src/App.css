@@ -1,0 +1,103 @@
+/*lOGIN PAGE*/
+.login_signup_page {
+    text-align: center;
+}
+
+.login_signup_card {
+    width: 40%;
+    margin: auto; 
+}
+
+.button {
+  margin-top: 20px;
+  align-self: center;
+  background-color: #fff;
+  background-image: none;
+  background-position: 0 90%;
+  background-repeat: repeat no-repeat;
+  background-size: 4px 3px;
+  border-radius: 15px 225px 255px 15px 15px 255px 225px 15px;
+  border-style: solid;
+  border-width: 2px;
+  box-shadow: rgba(0, 0, 0, .2) 15px 28px 25px -18px;
+  box-sizing: border-box;
+  color: #41403e;
+  cursor: pointer;
+  display: inline-block;
+  font-family: Neucha, sans-serif;
+  font-size: 1rem;
+  line-height: 23px;
+  outline: none;
+  padding: .75rem;
+  text-decoration: none;
+  transition: all 235ms ease-in-out;
+  border-bottom-left-radius: 1px 255px;
+  border-bottom-right-radius: 225px 15px;
+  border-top-left-radius: 255px 15px;
+  border-top-right-radius: 15px 225px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.button:hover {
+  box-shadow: rgba(0, 0, 0, .3) 2px 8px 8px -5px;
+  transform: translate3d(0, 2px, 0);
+}
+
+.button:focus {
+  box-shadow: rgba(0, 0, 0, .3) 2px 8px 4px -6px;
+  background-color: initial;
+  color: initial;
+}
+
+
+/*HOME PAGE*/
+.home_page {
+    position: relative;
+}
+.floating_add_button_cont {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+
+}
+
+.floating_add {
+    background-color: blueviolet;
+}
+
+.rows_for_editprofile {
+    display: table;
+    width: 100%; /*Optional*/
+    table-layout: fixed; /*Optional*/
+    border-spacing: 10px; /*Optional*/
+}
+
+.editprofile_card{
+    position: relative;
+    
+}
+
+.editprofile_button_div {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+}
+
+.budget_for_the_month {
+    text-align: center;
+}
+
+.profile_p {
+    border: 2px solid;
+    border-radius: 20px;
+    padding: 10px;
+    width: 100%;
+    height: 200%;
+    
+}
+
+.edit_link {
+    color: black
+}
