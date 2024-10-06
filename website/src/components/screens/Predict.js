@@ -10,7 +10,6 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 
 
-
 const Predict = () => {
   const [MB, setMB] = useState([])
   const [income, setIncome] = useState([])

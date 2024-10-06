@@ -49,16 +49,29 @@ const SignUp = () => {
             monthlyIncome: 0,
         };
 
+        const accessToken = {
+            accessToken: []
+        }
+
+        const transaction = {
+            transaction: []
+        }
+
         const myCollection = collection(db, currentUser.uid);
         const monthlyBudgetDoc = doc(myCollection, 'monthlyBudget');
         const goalDoc = doc(myCollection, 'goals');
         const incomeDoc = doc(myCollection, 'income');
+        const tokenDoc = doc(myCollection, 'accessToken');
+        const transactionDoc = doc(myCollection, 'transaction');
+
+
 
 
         await setDoc(monthlyBudgetDoc, usersBudget);
         await setDoc(goalDoc, Goal);
         await setDoc(incomeDoc, Income);
-
+        await setDoc(tokenDoc, accessToken);
+        await setDoc(transactionDoc, transaction);
 
     };
 
