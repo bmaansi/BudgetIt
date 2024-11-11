@@ -13,8 +13,11 @@ const Login = () => {
         try {
         const user = await signInWithEmailAndPassword(auth, email, password);
         console.log(user);
+        
+
         } catch (error) {
-            console.log(error.message);
+            alert(error.message)
+            // console.log(error.message);
         }
     }
     return(

@@ -102,3 +102,10 @@
     color: black
 }
 
+.card h6 {
+    margin-bottom: 4px; /* Adjust for spacing below the heading */
+}
+
+.card p {
+    margin: 2px 0; /* Adjust as needed */
+}

@@ -4,7 +4,7 @@ import { usePlaidLink } from 'react-plaid-link';
 import fetchLinkToken from '../../utils/Actions';
 import axios from 'axios';
 import {db,auth} from "../../firebase/firebaseConfig"
-import { collection, setDoc, getDoc, doc } from "firebase/firestore"; 
+import { collection, setDoc, getDoc, updateDoc, doc } from "firebase/firestore"; 
 import {onAuthStateChanged } from "firebase/auth"; 
 import {Link} from "react-router-dom";
 // import { readAccessToken } from "../../firebase/fireStorage";
@@ -18,29 +18,46 @@ const Home = () => {
 
   const [linkToken, setLinkToken] = useState();
   // const [PublicToken, setPublicToken] = useState();
-  const [accessToken, setAccessToken] = useState([]);
+  const [accessToken, setAccessToken] = useState(null);
+  const [accessToken2, setAccessToken2] = useState();
+
   const [account, setAccount] = useState([])
-  const [start_date, setStartDate] = useState();
-  const [end_date, setEndDate] = useState();
+  const [accountFB, setAccountFB] = useState([])
+
+  const [user, setUser] = useState();
+  const [transactions, setTransaction] = useState([])
+  const [transactions2, setTransaction2] = useState({})
 
 
 
-  const updateUserData = async () => {
+const updateUserData = async (accessToken, account, transactions) => {
     
-    try {
-      const currentUser = auth.currentUser;
-      const myCollection = collection(db, currentUser.uid);
-      const tokenDoc = doc(myCollection, 'accessToken');
-      console.log("ACCESS TOKEN ", accessToken);
-      const AT = {
-        accessToken: accessToken
-      }
-  
-      await setDoc(tokenDoc, AT);
+  try {
+    const currentUser = auth.currentUser;
+    const myCollection = collection(db, currentUser.uid);
+    const tokenDoc = doc(myCollection, 'accessToken');
+    //console.log("ACCESS TOKEN ", accessToken);
+    // const AT = {
+    //   [accessToken]: {
+    //     account: account,
+    //     transactions: transactions
+    //   }
+    // }
+    const AT = new Map();
+    AT.set(accessToken, {
+      account: account,
+      transactions: transactions
+    });
 
-    } catch (error) {
-      console.log(error)
-    }
+    const ATObj = Object.fromEntries(AT);
+
+    await updateDoc(tokenDoc, ATObj);
+
+    //await setDoc(tokenDoc, AT);
+
+  } catch (error) {
+    console.log(error)
+  }
 };
 
   const readDoc = async () => {
@@ -49,12 +66,19 @@ const Home = () => {
       if (user) {
         const myCollection = collection(db, user.uid);
         const tokenDoc = doc(myCollection, 'accessToken');
+        const tempArray = []
     
         getDoc(tokenDoc)
         .then(docSnap => {
           if (docSnap.exists()) {
-            //console.log("Document data:", docSnap.data().accessToken);
-            setAccessToken(docSnap.data().accessToken);
+            const data = docSnap.data()
+            Object.keys(data).forEach((AT) => {
+              tempArray.push(data[AT].account);
+
+            })
+            setAccountFB(tempArray)
+            
+
           } else {
             console.log("No such document!");
           }
@@ -70,11 +94,13 @@ const Home = () => {
 }
 
     useEffect(()=> {
+      readDoc();
       async function fetch() {
-        await readDoc();
         try {
-          const response = await axios.post("/create_link_token");
-          console.log("LINK TOKEN",  response.data.link_token);
+          let response = await axios.post(
+            "/create_link_token", 
+            //{uid: auth.currentUser.uid}
+          );
           setLinkToken(response.data.link_token);
         } catch (error) {
           console.log("ERROR fetching link token: ", error);
@@ -85,13 +111,46 @@ const Home = () => {
     }, [])
 
     useEffect(() => {
-      if (accessToken.length > 0) {
-        updateUserData();
-        fetchAccount();
-        // fetchTransactions();
-      }
-      
+      const fetchData = async () => {
+        if (accessToken) {
+          console.log("IN HERE")
+          try {
+            const account = await fetchAccount(accessToken);
+            const transactions = await fetchTransactions(accessToken);
+            
+            let infoArray = [];
+            if (account && transactions) {
+              account.forEach(element => {
+                const tempInfo = {
+                  name: element.official_name,
+                  account_id: element.account_id
+                };
+                infoArray.push(tempInfo)
+              }                 
+            )
+
+            
+
+              const transactionsAndInfo = {
+                transactions, 
+                infoArray
+              }
+              updateUserData(accessToken, account, transactionsAndInfo);
+              console.log("IN HERE 2")
+              
+              setAccessToken(null);
+              //setAccount([]);
+              //setTransaction([]);
+            }
+          } catch (error) {
+            console.error('Error fetching account or transactions:', error);
+          }
+        }
+      };
+    
+      fetchData();
     }, [accessToken]);
+    
 
 
   
@@ -105,7 +164,9 @@ const Home = () => {
             '/exchange_public_token', 
             {public_token: public_token}
           );
-          setAccessToken((preToken) => setAccessToken([...preToken, accessToken.data]))
+          //console.log(accessToken.data)
+          setAccessToken(accessToken.data.access_token)
+          
         } catch (error) {
           console.error("Error exchanging token:", error);
         }
@@ -114,22 +175,48 @@ const Home = () => {
       }
     });
 
+    const fetchTransactions = async (AT) => {
+        try {
+          let transactions = await axios.post(
+            '/transactions/sync', 
+            {
+              access_token: AT,
+              cursor: null
+            }
+          );
+          const response = transactions.data
+          return response
+          
+          //setTransaction((pre) => [...pre, transactions.data]);
 
-    const fetchAccount = async () => {
-      async function fetch(AT) {
+          //setUsers((prevUsers) => [...prevUsers, newUser]);
+        } catch (error) {
+          console.error("Error fetching account: ", error);
+          throw error
+        }
+    }
+
+
+    const fetchAccount = async (AT) => {
+      //async function fetch(AT) {
         try {
           let accountInfo = await axios.post(
             '/accounts', 
             {access_token: AT}
           );
           //setUsers((prevUsers) => [...prevUsers, newUser]);
-          setAccount((pre) => [...pre, accountInfo.data]);
+          //setAccount((pre) => [...pre, accountInfo.data]);
+          //console.log(accountInfo.data)
+          //fetchTransactions(AT)
+          const response = accountInfo.data.accounts
+          return response
           
         } catch (error) {
           console.error("Error fetching account: ", error);
+          throw error
         }
-      }
-      accessToken.forEach(fetch);
+      //}
+      //accessToken.forEach(fetch);
     }
 
 
@@ -148,16 +235,14 @@ const Home = () => {
         onClick={() => open()} disabled={!ready}
         ><i class="material-icons">add</i></button>
         </div>
-
         <div class="row">
         {
           //<p>{item.accounts[0].account_id}</p>
-          account?.map(items => {
-            {console.log(items)}
+          accountFB?.map(items => {
             return (
-              <div class="col s12 m4"> 
-              {items.accounts.map(item => {
-                return (
+              <div class='col s12 m4'>
+                {items.map(item => {
+                   return (
                   <div class="card">
                     <span class="card-title">{item.official_name}</span>
                     <div class="card-content">
@@ -166,11 +251,13 @@ const Home = () => {
                     </div>
                   
                   </div>
-                )      
-              })}
+                )
+                })}
               </div>
             )
           })
+         
+
         }
         </div>
 

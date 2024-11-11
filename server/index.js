@@ -24,7 +24,7 @@ const plaidClient = new PlaidApi(configuration);
 app.post('/create_link_token', async function (request, response) {
     //Get the client_user_id by searching for the current user
     //const user = await User.find(...);
-    //const clientUserId = user.id;
+    //const clientUserId = request.body.uid;
 
     const plaidRequest = {
       user: {
@@ -84,6 +84,61 @@ app.post('/transactions/get', async function (request, response) {
 });
   
 
+app.post('/transactions/sync', async function (request, response) {
+  // Provide a cursor from your database if you've previously
+  // received one for the Item. Leave null if this is your
+  // first sync call for this Item. The first request will
+  // return a cursor.
+  try {
+
+  let cursor = request.body.cursor;
+
+  // New transaction updates since "cursor"
+  let added = [];
+  let modified = [];
+  
+
+  // Removed transaction ids
+  let removed = [];
+  let hasMore = true;
+
+  // Iterate through each page of new transaction updates for item
+  while (hasMore) {
+    const req = TransactionsSyncRequest = {
+      access_token: request.body.access_token,
+      cursor: cursor,
+    };
+    const response = await plaidClient.transactionsSync(req);
+    const data = response.data;
+
+    // Add this page of results
+    added = added.concat(data.added);
+    modified = modified.concat(data.modified);
+    removed = removed.concat(data.removed);
+
+    hasMore = data.has_more;
+
+    // Update cursor to the next cursor
+    cursor = data.next_cursor;
+    
+  }
+
+  // Persist cursor and updated data
+  //database.applyUpdates(itemId, added, modified, removed, cursor);
+    response.json({
+      status: 'success',
+      added: added,
+      modified: modified,
+      removed: removed,
+      cursor: cursor,
+    })
+  } catch (error) {
+    throw error
+  }
+
+});
+  
+
   
   app.post('/exchange_public_token', async function (
     request,
@@ -99,7 +154,7 @@ app.post('/transactions/get', async function (request, response) {
       const plaidResponse = await plaidClient.itemPublicTokenExchange({
         public_token: publicToken,
       });
-      const accessToken = plaidResponse.data.access_token;
+      const accessToken = plaidResponse.data;
       //const itemID = plaidResponse.data.item_id;
       //console.log(accessToken)
       //response.json( public_token_exchange: 'complete');

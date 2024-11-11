@@ -53,16 +53,18 @@ const SignUp = () => {
             accessToken: []
         }
 
-        const transaction = {
-            transaction: []
-        }
+        // const transaction = {
+        //     transaction: [
+        //         {cursor: null}
+        //     ]
+        // }
 
         const myCollection = collection(db, currentUser.uid);
         const monthlyBudgetDoc = doc(myCollection, 'monthlyBudget');
         const goalDoc = doc(myCollection, 'goals');
         const incomeDoc = doc(myCollection, 'income');
         const tokenDoc = doc(myCollection, 'accessToken');
-        const transactionDoc = doc(myCollection, 'transaction');
+        //const transactionDoc = doc(myCollection, 'transaction');
 
 
 
@@ -71,7 +73,7 @@ const SignUp = () => {
         await setDoc(goalDoc, Goal);
         await setDoc(incomeDoc, Income);
         await setDoc(tokenDoc, accessToken);
-        await setDoc(transactionDoc, transaction);
+       // await setDoc(transactionDoc, transaction);
 
     };
 
@@ -90,12 +92,12 @@ const SignUp = () => {
         <h4>Welcome to Budget It!</h4>
         <h6>One place for all your budget needs</h6>
         <div class="login_signup_card">
-            <input 
+            {/* <input 
                 type="text" 
                 placeholder="Name" 
                 value={name} 
                 onChange={(e)=>setName(e.target.value)}
-            />
+            /> */}
             <input 
                 type="email" 
                 class="validate"

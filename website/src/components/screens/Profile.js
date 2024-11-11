@@ -3,7 +3,8 @@ import "../../App.css";
 import {Link} from "react-router-dom";
 import {db,auth} from "../../firebase/firebaseConfig"
 import { collection, doc, getDoc  } from "firebase/firestore";
-import { getAuth, onAuthStateChanged } from "firebase/auth"; 
+import { getAuth, onAuthStateChanged, signOut } from "firebase/auth"; 
+
 
 
 
@@ -86,7 +87,8 @@ const Profile = () => {
         }
     </div>
 
-    <div>
+    <div class="row">
+    <div class="input-field col s4">
       <h6>Your monthly income is </h6>
        {
           Object.keys(income).map(key => (
@@ -97,7 +99,7 @@ const Profile = () => {
         }
     </div>
 
-    <div>
+    <div class="input-field col s4">
       <h6>Your saving goals are </h6>
        {
           Object.keys(goals).map(key => (
@@ -107,11 +109,25 @@ const Profile = () => {
           ))
         }
     </div>
+  </div>
+
 
     <div>
       <button class="button">
         <Link class = "edit_link"
         to='/editprofile'>EDIT</Link>
+      </button>
+    </div>
+
+    <div>
+      <button class="button"
+      onClick={() => {
+        signOut(auth)
+      }}
+      >
+        <Link class = "edit_link"
+        to='/login'>LOGOUT</Link>
+        
       </button>
     </div>
  
