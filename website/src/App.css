@@ -90,12 +90,23 @@
 }
 
 .profile_p {
-    border: 2px solid;
-    border-radius: 20px;
     padding: 10px;
     width: 100%;
-    height: 200%;
-    
+    border-bottom: 1px solid black; /* Adjust thickness and color */
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+    padding: 10px 15px; /* Add space inside the input */
+    border-radius: 8px; /* Smooth the edges */
+    height: 40px; /* Ensure it has enough height */
+    width: 100%; /* Adjust width if necessary */
+    box-sizing: border-box; /* Prevent padding from affecting total size */
 }
 
 .edit_link {
@@ -109,3 +120,38 @@
 .card p {
     margin: 2px 0; /* Adjust as needed */
 }
+
+
+
+.bankname_in_transaction:hover {
+    cursor: pointer;
+}
+
+.monthly_budget_bubbles {
+    width: 200px;
+    border-radius: 8px;
+  }
+  
+  .profile_p {
+    font-size: 14px;
+  }
+  
+
+  .savings-container {
+    text-align: center; 
+  }
+  
+  .card-content {
+    height: 100px;
+
+  }
+
+  .summary {
+    padding-left: 10px;
+  }
+
+  .summary li {
+
+    list-style-type: circle;
+  
+  }

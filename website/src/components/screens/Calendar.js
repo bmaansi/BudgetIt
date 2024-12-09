@@ -2,12 +2,15 @@
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, PureComponent } from 'react';
 import "../../App.css";
 import axios from 'axios';
 import {db,auth} from "../../firebase/firebaseConfig"
-import { collection, setDoc, getDoc, doc } from "firebase/firestore"; 
+import { collection, getDoc, setDoc, doc } from "firebase/firestore"; 
 import {onAuthStateChanged } from "firebase/auth"; 
+//import { BarChart } from '@mui/x-charts/BarChart';
+import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+
 
 const localizer = momentLocalizer(moment)
 //Calendar.momentLocalizer(moment);
@@ -16,19 +19,24 @@ const TransactionCalendar = () => {
     const [accessToken, setAccessToken] = useState([]);
    // const [d, setDate] = useState(new Date());
     const [date, setDate] = useState(new Date());
-    const [transactions, setTransaction] = useState([])
-    const [isOpen, setIsOpen] = useState(false);
+    const [allInfo, setAllInfo] = useState([])
     const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
     const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const currentMonthName = monthNames[currentMonth];
     const [openDropdownId, setOpenDropdownId] = useState(null);
+    const [pieData, setPieData] = useState([]);
+    
+
+    let filtered = [];
+    const [showChart, setShowChart] = useState(false);
+    const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#d0ed57', '#a4de6c']; 
 
     const toggleDropdown = (id) => {
       setOpenDropdownId(openDropdownId === id ? null : id);
     };
 
-        // Function to go to the previous month
+        
     const previousMonth = () => {
       if (currentMonth === 0) {
           setCurrentMonth(11);
@@ -38,7 +46,6 @@ const TransactionCalendar = () => {
       }
     };
   
-      // Function to go to the next month
     const nextMonth = () => {
       if (currentMonth === 11) {
           setCurrentMonth(0);
@@ -60,13 +67,14 @@ const TransactionCalendar = () => {
           .then(docSnap => {
             if (docSnap.exists()) {
               const data = docSnap.data()
-              //console.log(data)
-              Object.keys(data).map((AT) => {
-                //console.log(data[AT].transactions.transactions)
-                tempArray.push(data[AT].transactions)
-              })
+              
+              const tempArray = Object.keys(data).map((AT) => ({
+                AT, // Store the AT key
+                transactions: data[AT].transactions,
+              }));
+
              
-              setTransaction(tempArray)
+              setAllInfo(tempArray)
   
             } else {
               console.log("No such document!");
@@ -83,155 +91,231 @@ const TransactionCalendar = () => {
       }
     }
 
-    const fetchTransactions = async (date) => {
-        const lastdate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    const updateUserData = async (accessToken, transactions) => {
+      try {
+        const currentUser = auth.currentUser;
+        const myCollection = collection(db, currentUser.uid);
+        const tokenDoc = doc(myCollection, 'accessToken');
+    
+        const docSnapshot = await getDoc(tokenDoc);
+        if (!docSnapshot.exists()) {
+          throw new Error("Document does not exist");
+        }
+        const data = docSnapshot.data();
+        data[accessToken].transactions.transactions = transactions;
+        await setDoc(tokenDoc, data);
 
-        const end_date = lastdate.toISOString().split('T')[0]
-        const start_date = date.toISOString().split('T')[0];
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    
+    const fetchTransactions = async (AT, cursor) => {
+      try {
+        let transactions = await axios.post(
+          '/transactions/sync', 
+          {
+            access_token: AT,
+            cursor: cursor
+          }
+        );
+        const response = transactions.data
+        //console.log(response)
+        return response
         
-        // console.log(end_date)
-        // console.log(start_date)
-      async function fetch(AT) {
-        try {
-          let transactions = await axios.post(
-            '/transactions/get', 
-            {
-              access_token: AT,
-              start_date: start_date,
-              end_date: end_date
-            }
-          );
-          console.log(transactions.data)
-          setTransaction([transactions.data]);
+      } catch (error) {
+        throw error
+      }
+  }
 
-          //setUsers((prevUsers) => [...prevUsers, newUser]);
+  const loopTransactions = () => {
+    console.log(allInfo)
+    allInfo.forEach(async (item) => {
+      let date = new Date();
+      let writtenDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+      if (item.transactions.transactions.date != writtenDate) {
+        try {
+
+          const res = await fetchTransactions(item.AT, item.transactions.transactions.cursor)
+          console.log(res)
+          //item.transactions.transactions.cursor = res.cursor
+          const combinedTransactions = [
+            ...item.transactions.transactions.added,
+            ...res.modified,
+          ];
+  
+          combinedTransactions.sort((a, b) =>  new Date(b.date)- new Date(a.date));
+          //console.log(combinedTransactions)
+          item.transactions.transactions.cursor = res.cursor
+          item.transactions.transactions.added = combinedTransactions
+          updateUserData(item.AT, item.transactions.transactions)
           
-          
+  
         } catch (error) {
-          console.error("Error fetching account: ", error);
+          console.log(error)
         }
       }
-      accessToken.forEach(fetch);
-    }
+      
+      
+    })
+  }
+
+  const pieChart = () => {
+    const categoryMap = new Map();
+    filtered.forEach((item) => {
+      const primary = item.personal_finance_category.primary;
+      const amount = item.amount;
+  
+      if (amount > 0) { 
+        if (categoryMap.has(primary)) {
+          categoryMap.set(primary, categoryMap.get(primary) + amount);
+        } else {
+          categoryMap.set(primary, amount);
+        }
+      }
+    });
+    const result = Array.from(categoryMap, ([name, value]) => ({ name, value }));
+    setPieData(result); // Update filtered state with the pie chart data
+    setShowChart(true); // Show the chart
+  };
+  
+  const barGraph = () => {
+    const categoryMap = new Map();
+    filtered.forEach((item) => {
+      const primary = item.personal_finance_category.primary;
+      const amount = item.amount;
+  
+      if (amount > 0) { 
+        if (categoryMap.has(primary)) {
+          categoryMap.set(primary, categoryMap.get(primary) + amount);
+        } else {
+          categoryMap.set(primary, amount);
+        }
+      }
+    });
+    const result = Array.from(categoryMap, ([name, value]) => ({ name, value }));
+    setPieData(result); // Update filtered state with the pie chart data
+    setShowChart(true); // Show the chart
+  };
 
     useEffect(()=> {
-        async function fetch() {
-          await readDoc();
-        }
-        fetch();
-      }, [])
+      async function fetch() {
+        await readDoc();
+      }
+      fetch();
+      loopTransactions();
+    }, [])
+
+
+    useEffect(()=> {
+      pieChart();
+    }, [openDropdownId, currentMonth])
 
     return (
-           <div>
-            {/* <Calendar 
-            localizer={localizer} 
-            selectable={true} 
-            startAccessor="start" 
-            endAccessor="end" 
-            style={{ height: 500, margin: "50px" }} 
-            /> */}
-              <div class="update_button">
-              <button class="button">
-                Update
-              </button> 
-              </div>
-                           
-                {
-                  transactions?.map(items => {
-                    
-                    return (
-                      <div>
-                        {items.infoArray.map(item =>
-                        
-                           <div>
-                            {console.log(item)}
-                            <div class="row">
-                              <h5>{item.name}</h5>
-
-                              <i 
-                              class="material-icons prefix" 
-                              onClick={() => toggleDropdown(item.account_id)}>
-                                  {openDropdownId === item.account_id ? "keyboard_arrow_up" : "keyboard_arrow_down"}
-                              </i>
-
-                           </div>
-                           {openDropdownId === item.account_id && (
-                            <div class='dropdown'>
-                              <div className="month-navigation">
-                                  <button onClick={previousMonth}>{"<"}</button>
-                                  <span>{currentMonthName} {currentYear}</span>
-                                  <button onClick={nextMonth}>{">"}</button>
-                              </div>
-                              <div class='row'>
-                               <div class="col s12 m6" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                                   {items.transactions.added
-                                       .filter(added => 
-                                        added.account_id === item.account_id &&
-                                        new Date(added.date).getMonth() === currentMonth &&
-                                        new Date(added.date).getFullYear() === currentYear
-                                      )
-                                       .map(added => (
-                                           <div class="card">
-                                               <h6>{added.name} - {added.date}</h6>
-                                               <p>{added.personal_finance_category.primary}</p>
-                                               <p>Payment Channel: {added.payment_channel}</p>   
-                                               <p>${added.amount}</p>  
-                                           </div>
-                                       ))
-                                   }
-                               </div>
-                               </div>
-                               </div>
-                           )}
-                       </div>
-
-                        )}
-                      </div>
-                    ) 
-                    
-                })}
-          
-          
-           {
-            // transactions?.map(items => {
-            // items.map(item=>{
-            //   item.infoArray.map(i=>{
-
-            //   })
-            // })
+      <div>           
+      {
+        allInfo?.map(data => {
+          return (
+            <div>
+              {data.transactions?.infoArray?.map(item =>
             
-            // return (
-            //   <div class='col s12 m4'>
-            //     {items.map(item => {
-            //       return (
-            //         <div>
-            //       {item.added.map(added => {
-            //           return (
-            //             <div class="card">
-            //               <span class="card-title">{added.name}</span>
-            //               <div class="card-content">
-            //                 <p>Amount Paid: ${added.amount} {added.iso_currency_code}</p>
-            //                 <p>Date of: {added.authorized_date}</p>
-            //                 <p>Payment method: {added.payment_channel}</p>
-            //                 <p>{added.website}</p>
-                            
-      
-            //               </div>
-            //             </div>
-            //           )
+                  <div>
+                  <div>
+                    <h5 class='bankname_in_transaction'
+                    onClick={() => {
+                      toggleDropdown(item.account_id)
+                      console.log(item)
+                    }
+                    }
+                    >{
+                      
+                      (item.official_name == null) ? (
+                        item.name
+                      ) : (
+                        item.official_name
+                      )
+                      }
+                    <i 
+                    class="material-icons prefix" 
+                    onClick={() => toggleDropdown(item.account_id)}>
+                        {openDropdownId === item.account_id ? "keyboard_arrow_up" : "keyboard_arrow_down"}
+                    </i>
+                    </h5>
+
                   
-                    
-                    
-            //       })}
-            //       </div>
-            // )
-            //     })}
-            //     </div>
-            // )
-          //}
-          //)
-        }
-           </div>
+                  </div>
+                  {openDropdownId === item.account_id && (
+                  <div class='dropdown_countainer'>
+                    <div className="month-navigation">
+                        <button onClick={previousMonth}>{"<"}</button>
+                        <span>{currentMonthName} {currentYear}</span>
+                        <button onClick={nextMonth}>{">"}</button>
+                    </div>
+                    <div class='row' style={{ display: 'flex', alignItems: 'flex-start' }}>
+                      <div  div style={{ flex: 1, maxHeight: '400px', overflowY: 'auto' }}>
+                          {data.transactions.transactions.added
+                              .filter(added => 
+                              added.account_id === item.account_id &&
+                              new Date(added.date).getMonth() === currentMonth &&
+                              new Date(added.date).getFullYear() === currentYear
+                            )
+                              .map(added => (
+                              filtered.push(added),
+                                  <div class="card">
+                                    
+                                    
+                                      <h6>{added.name} - {added.date}</h6>
+                                      <p>{added.personal_finance_category.primary}</p>
+                                      <p>Payment Channel: {added.payment_channel}</p>   
+                                      <p>${added.amount}</p>  
+                                  </div>
+                              ))
+                          }
+                          
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: '10px' }}>
+                          {showChart && (
+                            
+                          <ResponsiveContainer width="100%" height={400}>
+                          <PieChart>
+                            <Pie
+                              dataKey="value"
+                              isAnimationActive={false}
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              fill="#8884d8"
+                              label={({ name, value }) => `${name} $(${value})`}
+                            >
+                              {pieData?.map((_, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                            </Pie>
+                            
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        )}
+                        </div>
+                      </div>
+                      <div> 
+                      
+
+                      </div>
+                      </div>
+                  )}
+              
+              </div>
+              
+
+              )}
+            </div>
+          ) 
+          
+      })}
+    
+      </div>
            
     )
 

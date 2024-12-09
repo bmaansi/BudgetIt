@@ -16,8 +16,10 @@ const NavBar = () => {
         if (user) {
             return [
                 <li><Link to="/">Home</Link></li>,
-                <li><Link to="/profile">Profile</Link></li>,
-                <li><Link to="/predict">Predict</Link></li>
+                <li><Link to="/budget">Budget</Link></li>,
+                <li><Link to="/transaction">Transactions</Link></li>,
+                <li><Link to="/analysis">Analysis</Link></li>
+
 
 
             ]

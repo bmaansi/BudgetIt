@@ -33,7 +33,9 @@ app.post('/create_link_token', async function (request, response) {
         client_user_id: "user"
       },
       client_name: 'Plaid Test App',
-      products: ['auth','transactions','identity'],
+      products: ['auth','transactions',
+        'identity', 'investments', 
+        'liabilities'],
       language: 'en',
       //webhook: 'https://webhook.example.com',
       redirect_uri: 'http://localhost:3000/',
@@ -107,9 +109,11 @@ app.post('/transactions/sync', async function (request, response) {
     const req = TransactionsSyncRequest = {
       access_token: request.body.access_token,
       cursor: cursor,
+      
     };
     const response = await plaidClient.transactionsSync(req);
     const data = response.data;
+
 
     // Add this page of results
     added = added.concat(data.added);
@@ -179,6 +183,7 @@ app.post('/transactions/sync', async function (request, response) {
       throw error
     }
   });
+
 
 app.get("/hello",(request, response) => {
     response.json({message: "hello world"});

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import "../../App.css";
 import { usePlaidLink } from 'react-plaid-link';
-import fetchLinkToken from '../../utils/Actions';
 import axios from 'axios';
 import {db,auth} from "../../firebase/firebaseConfig"
-import { collection, setDoc, getDoc, updateDoc, doc } from "firebase/firestore"; 
-import {onAuthStateChanged } from "firebase/auth"; 
+import { collection, deleteField, getDoc, updateDoc, doc, arrayRemove  } from "firebase/firestore"; 
+import { onAuthStateChanged, signOut } from "firebase/auth"; 
 import {Link} from "react-router-dom";
+
+
 // import { readAccessToken } from "../../firebase/fireStorage";
 
 
@@ -19,14 +20,19 @@ const Home = () => {
   const [linkToken, setLinkToken] = useState();
   // const [PublicToken, setPublicToken] = useState();
   const [accessToken, setAccessToken] = useState(null);
-  const [accessToken2, setAccessToken2] = useState();
-
-  const [account, setAccount] = useState([])
   const [accountFB, setAccountFB] = useState([])
+  const [openDropdownId, setOpenDropdownId] = useState(false);
+  const [refresh, setRefresh] = useState()
+  let checkings = 0;
+  let credit = 0;
+  let debt = 0;
+  let loan = 0;
+  let investments = 0;
+  let savings = 0;
 
-  const [user, setUser] = useState();
-  const [transactions, setTransaction] = useState([])
-  const [transactions2, setTransaction2] = useState({})
+  const toggleDropdown = () => {
+    setOpenDropdownId(openDropdownId === true ? false : true);
+  };
 
 
 
@@ -36,13 +42,7 @@ const updateUserData = async (accessToken, account, transactions) => {
     const currentUser = auth.currentUser;
     const myCollection = collection(db, currentUser.uid);
     const tokenDoc = doc(myCollection, 'accessToken');
-    //console.log("ACCESS TOKEN ", accessToken);
-    // const AT = {
-    //   [accessToken]: {
-    //     account: account,
-    //     transactions: transactions
-    //   }
-    // }
+    
     const AT = new Map();
     AT.set(accessToken, {
       account: account,
@@ -73,7 +73,13 @@ const updateUserData = async (accessToken, account, transactions) => {
           if (docSnap.exists()) {
             const data = docSnap.data()
             Object.keys(data).forEach((AT) => {
-              tempArray.push(data[AT].account);
+              if (AT != "accessToken") {
+                tempArray.push({ 
+                  info: data[AT].account,
+                  AT: AT
+                });
+              }
+              
 
             })
             setAccountFB(tempArray)
@@ -113,7 +119,6 @@ const updateUserData = async (accessToken, account, transactions) => {
     useEffect(() => {
       const fetchData = async () => {
         if (accessToken) {
-          console.log("IN HERE")
           try {
             const account = await fetchAccount(accessToken);
             const transactions = await fetchTransactions(accessToken);
@@ -121,26 +126,30 @@ const updateUserData = async (accessToken, account, transactions) => {
             let infoArray = [];
             if (account && transactions) {
               account.forEach(element => {
+                let name;
+                if (element.official_name == null) {
+                  name = element.name;
+                } else {
+                  name = element.official_name
+                }
                 const tempInfo = {
-                  name: element.official_name,
+                  name: name,
                   account_id: element.account_id
                 };
                 infoArray.push(tempInfo)
               }                 
             )
 
-            
-
               const transactionsAndInfo = {
                 transactions, 
                 infoArray
               }
               updateUserData(accessToken, account, transactionsAndInfo);
-              console.log("IN HERE 2")
               
               setAccessToken(null);
               //setAccount([]);
               //setTransaction([]);
+              
             }
           } catch (error) {
             console.error('Error fetching account or transactions:', error);
@@ -151,9 +160,9 @@ const updateUserData = async (accessToken, account, transactions) => {
       fetchData();
     }, [accessToken]);
     
+    
+      
 
-
-  
     const { open, ready } = usePlaidLink({
       token: linkToken,
       onSuccess: (public_token) => {
@@ -172,7 +181,9 @@ const updateUserData = async (accessToken, account, transactions) => {
         }
       }
       fetchData();
+      
       }
+      
     });
 
     const fetchTransactions = async (AT) => {
@@ -184,7 +195,12 @@ const updateUserData = async (accessToken, account, transactions) => {
               cursor: null
             }
           );
-          const response = transactions.data
+          let date = new Date();
+          let writtenDate = `${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}/${date.getFullYear()}`;
+          const response = {
+            ...transactions.data,
+            date: writtenDate, 
+          };
           return response
           
           //setTransaction((pre) => [...pre, transactions.data]);
@@ -219,13 +235,218 @@ const updateUserData = async (accessToken, account, transactions) => {
       //accessToken.forEach(fetch);
     }
 
+   
+
+    const delField = async (fieldName) => {
+      try {
+        const currentUser = auth.currentUser;
+        const myCollection = collection(db, currentUser.uid);
+        const tokenDoc = doc(myCollection, 'accessToken');
+
+        await updateDoc(tokenDoc , {
+          [fieldName]: deleteField(),
+        });
+    
+        console.log(`Document has been deleted.`);
+        //window.location.reload();
+      } catch (error) {
+        console.error("Error deleting document:", error);
+      }
+    };
+
+    const removeAccount = async (fieldName, targetId) => {
+      const currentUser = auth.currentUser;
+      const myCollection = collection(db, currentUser.uid);
+      const docRef = doc(myCollection, 'accessToken');
+      
+    
+      try {
+        const docSnap = await getDoc(docRef);
+        const fieldValue = docSnap.get(fieldName);
+    
+        if (docSnap.exists()) {
+          //const data = docSnap.data();
+          
+          const account = fieldValue.account;
+          const transactionInfo = fieldValue.transactions.infoArray;
+          const transaction = fieldValue.transactions.transactions.added;
+          //console.log(transaction)
+    
+          const updatedAccount = fieldValue.account.filter(item => item.account_id !== targetId);
+          const updatedTransactionInfo = fieldValue.transactions.infoArray.filter(item => item.account_id !== targetId);
+          const updatedTransaction = fieldValue.transactions.transactions.added.filter(item => item.account_id !== targetId);
+
+          const updatedFieldValue = {
+            ...fieldValue,
+            account: updatedAccount,
+            transactions: {
+              ...fieldValue.transactions,
+              infoArray: updatedTransactionInfo,
+              transactions: {
+                ...fieldValue.transactions.transactions,
+                added: updatedTransaction,
+              },
+            },
+          };
+
+          await updateDoc(docRef, {
+            [fieldName]: updatedFieldValue,
+          });
+
+
+        } else {
+          console.log("Document does not exist!");
+        }
+      } catch (error) {
+        console.error("Error removing object:", error);
+      }
+      //window.location.reload();
+    };
 
  
     return (
       
       <div class="home_page">
-        
         <div>
+        {
+          
+        (accountFB.length === 0) ? (
+          <div>
+            <h5>To get started click the add button to the right</h5> 
+          </div>
+        ) : (
+          <div>
+            {
+               accountFB?.map(items => {
+                return (
+                  <div>
+                    {items.info?.map(item => {
+                      if(item.subtype == "checking") {
+                        if (item.balances.available != null) {
+                          checkings += parseInt(item.balances.available)
+                        }
+                      }
+                      else if(item.subtype == "credit card") {
+                        if (item.balances.current != null) {
+                          debt += parseInt(item.balances.current)
+                        }
+                        if (item.balances.available != null) {
+                          credit += parseInt(item.balances.available)
+                        } else {
+                          credit += (item.balances.limit - item.balances.current)
+                        }
+                      } else if(item.type == "loan") {
+                        if (item.balances.current != null){
+                          loan += parseInt(item.balances.current)
+                        }  
+                      } else if(item.type == "investment") {
+                        if (item.balances.current != null){
+                          investments += parseInt(item.balances.current)
+                        }  
+                      } else if(item.subtype == "savings") {
+                        if (item.balances.available != null){
+                          savings += parseInt(item.balances.available )
+                        }  
+                      }
+                    })}
+                  </div>
+                )
+              })
+            }
+            
+            <div class="summary">
+            <h5 class='bankname_in_transaction'
+              onClick={() => {toggleDropdown()}
+              }
+              >Summary
+              <i 
+              class="material-icons prefix" 
+              onClick={() => toggleDropdown()}>
+                  {openDropdownId === true ? "keyboard_arrow_up" : "keyboard_arrow_down"}
+              </i>
+            </h5>
+
+            {openDropdownId === true && (
+              <ul>
+                <li>Available balance in checkings: ${checkings}</li>
+                <li>Available balance in credit card: ${credit}</li>
+                <li>Total credit card debt: ${debt}</li>
+                <li>Total loan to pay off: ${loan}</li>
+                <li>Total investments: ${investments}</li>
+                <li>Total savings: ${savings}</li>
+
+              </ul>
+            )}
+              
+            </div>
+
+            <div class="row">
+        {
+          accountFB?.map(items => {
+            // console.log(items)
+            return (
+              <div >
+                {items.info?.map(item => {
+                 
+                   return (
+                    <div class="col s6">
+                  <div class="card">
+                    <span class="card-title">
+                     {
+                      (item.official_name == null) ? (
+                        item.name
+                      ) : (
+                        item.official_name
+                      )
+                    }
+                      
+                    </span>
+                    
+                    <div class="card-content">
+                      
+                      <p>Available: ${item.balances.available}</p>
+                      <p>Current: ${item.balances.current}</p>
+                      {/* <p>Type {item.type}</p>
+                      <p>SubType {item.subtype}</p> */}
+                      {
+                        (item.subtype == "credit card") ? (
+                          <p>Limit: ${item.balances.limit}</p>
+                        ) : (
+                          <p></p>
+                        )
+                      }
+
+
+                      
+                    </div>
+                    <i class="material-icons prefix"
+                    onClick={() => {
+                      if (items.info.length > 1) {
+                        removeAccount(items.AT, item.account_id)
+                        
+                      } else {
+                        delField(items.AT)
+                      }
+           
+                    }
+                    }
+                    >delete</i>
+                  
+                  </div>
+                  </div>
+                )
+                })}
+              </div>
+            )
+          })
+        }
+        </div>
+
+
+            
+          </div>
+        )
+        }
 
         </div>
         <div class="floating_add_button_cont">
@@ -235,44 +456,18 @@ const updateUserData = async (accessToken, account, transactions) => {
         onClick={() => open()} disabled={!ready}
         ><i class="material-icons">add</i></button>
         </div>
-        <div class="row">
-        {
-          //<p>{item.accounts[0].account_id}</p>
-          accountFB?.map(items => {
-            return (
-              <div class='col s12 m4'>
-                {items.map(item => {
-                   return (
-                  <div class="card">
-                    <span class="card-title">{item.official_name}</span>
-                    <div class="card-content">
-                      <p>Available: ${item.balances.available}</p>
-                      <p>Current: ${item.balances.current}</p>
-                    </div>
-                  
-                  </div>
-                )
-                })}
-              </div>
-            )
-          })
-         
+        
 
-        }
-        </div>
-
-        <div>
-
-        <button 
-            class="button"
-            >
-          <Link class="edit_link" to={{
-            pathname: '/transactioncal',
-            state: { accessToken} // Pass arguments here
+        <div class="input-field col s3">
+          <button class="button"
+          onClick={() => {
+            signOut(auth)
           }}
-          >View Transactions</Link>
-        </button>
-
+          >
+            <Link class = "edit_link"
+            to='/login'>LOG OUT</Link>
+            
+          </button>
         </div>
       </div>
     );

@@ -28,8 +28,7 @@ const SignUp = () => {
         event.preventDefault();
         const usersBudget = {
             housing: 0,
-            electricity: 0,
-            otherHouse: 0,
+            merchandise: 0,
             insurance: 0,
             healthcare: 0,
             education: 0,
@@ -38,6 +37,9 @@ const SignUp = () => {
             transportation: 0,
             restaurant: 0,
             entertainment: 0,
+            loans: 0,
+            travel: 0, 
+            services: 0,
             other: 0
         };
 
