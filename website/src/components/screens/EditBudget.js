@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import "../../App.css";
-import {Link} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import {db,auth} from "../../firebase/firebaseConfig"
 import { collection, updateDoc, getDoc,doc } from "firebase/firestore"; 
 import { onAuthStateChanged, signOut } from "firebase/auth"; 
@@ -30,6 +30,7 @@ const EditBudget = () => {
     const [income, setIncome] = useState([])
     const [goals, setGoals] = useState([])
     const [total, setTotal] = useState(0);
+    const nav = useNavigate();
 
  
     useEffect(()=> {
@@ -340,9 +341,15 @@ const EditBudget = () => {
         <div class="editprofile_button_div">
             <button 
             class="button"
-            onClick={updateUserData}
+            onClick={
+              () => {
+                updateUserData();
+                nav("/budget");
+              }
+              
+            }
             >
-            <Link class="edit_link" to='/budget'>SAVE</Link>
+            SAVE
         </button>
         </div>
 

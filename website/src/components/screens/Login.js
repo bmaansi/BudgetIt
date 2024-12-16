@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useContext } from "react";
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import "../../App.css";
 import {auth} from "../../firebase/firebaseConfig"
 import {onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
@@ -8,11 +8,12 @@ import {onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
 const Login = () => {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const nav = useNavigate();
 
     const PostData = async () => {
         try {
-        const user = await signInWithEmailAndPassword(auth, email, password);
-        console.log(user);
+        await signInWithEmailAndPassword(auth, email, password);
+        nav("/")
         
 
         } catch (error) {

@@ -1,6 +1,6 @@
 import React, { Children, useEffect, useState } from 'react';
 import "../../App.css";
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import {db,auth} from "../../firebase/firebaseConfig"
 import { collection, doc, getDoc  } from "firebase/firestore";
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth"; 
@@ -13,6 +13,7 @@ const Budget = () => {
   const [MB, setMB] = useState([])
   const [income, setIncome] = useState([])
   const [goals, setGoals] = useState([])
+  const nav = useNavigate();
   let totalPlannedBudget = 0
   let remaining = 0;
 
@@ -129,9 +130,13 @@ const Budget = () => {
         
 
         <div class="input-field col s4">
-          <button class="button">
-            <Link class = "edit_link"
-            to='/editbudget'>EDIT</Link>
+          <button class="button"
+          onClick={() => {
+              nav("/editbudget")
+            }
+          }
+          >
+            EDIT
           </button>
         
         </div>

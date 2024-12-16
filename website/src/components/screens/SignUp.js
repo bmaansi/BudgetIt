@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import {onAuthStateChanged,createUserWithEmailAndPassword } from "firebase/auth";
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 import "../../App.css";
 import { collection, setDoc,doc } from "firebase/firestore"; 
 import {db,auth} from "../../firebase/firebaseConfig"
@@ -13,11 +13,13 @@ const SignUp = () => {
     const [password, setPassword] = useState("")
     //const [checkPassword, setCheckPassword] = useState("")
     const [name, setName] = useState("")
+    const nav = useNavigate();
+
       
     const CreateUser = async () => {
         try {
-        const user = await createUserWithEmailAndPassword(auth, email, password);
-        console.log(user);
+        await createUserWithEmailAndPassword(auth, email, password);
+        nav("/editbudget")
         } catch (error) {
             console.log(error.message);
         }

@@ -8,6 +8,7 @@ import EditBudget from "./components/screens/EditBudget";
 import Predict from "./components/screens/Predict";
 import TransactionCalendar from "./components/screens/Calendar";
 import Analysis from "./components/screens/Analysis";
+import ProtectedRoute from './firebase//ProtectedRoute';
 
 import NavBar from "./components/NavBar";
 import React, { useEffect, useState } from 'react';
@@ -19,12 +20,56 @@ const Routing = () => {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
-      <Route path="/budget" element={<Budget />} />
-      <Route path="/editbudget" element={<EditBudget />} />
-      <Route path="/predict" element={<Predict />} />
-      <Route path="/transaction" element={<TransactionCalendar />} />
-      <Route path="/analysis" element={<Analysis />} />
-      <Route path="/" element={<Home />} />
+
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/budget"
+        element={
+          <ProtectedRoute>
+            <Budget />
+          </ProtectedRoute>
+        }
+      />
+        <Route
+        path="/editbudget"
+        element={
+          <ProtectedRoute>
+            <EditBudget />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/predict"
+        element={
+          <ProtectedRoute>
+            <Predict />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/transaction"
+        element={
+          <ProtectedRoute>
+            <TransactionCalendar />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/analysis"
+        element={
+          <ProtectedRoute>
+            <Analysis />
+          </ProtectedRoute>
+        }
+      />
+      
     </Routes>
   )
 }

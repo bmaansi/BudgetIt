@@ -5,7 +5,7 @@ import axios from 'axios';
 import {db,auth} from "../../firebase/firebaseConfig"
 import { collection, deleteField, getDoc, updateDoc, doc, arrayRemove  } from "firebase/firestore"; 
 import { onAuthStateChanged, signOut } from "firebase/auth"; 
-import {Link} from "react-router-dom";
+import {Link, useNavigate} from "react-router-dom";
 
 
 // import { readAccessToken } from "../../firebase/fireStorage";
@@ -22,7 +22,8 @@ const Home = () => {
   const [accessToken, setAccessToken] = useState(null);
   const [accountFB, setAccountFB] = useState([])
   const [openDropdownId, setOpenDropdownId] = useState(false);
-  const [refresh, setRefresh] = useState()
+  const nav = useNavigate();
+
   let checkings = 0;
   let credit = 0;
   let debt = 0;
@@ -248,7 +249,7 @@ const updateUserData = async (accessToken, account, transactions) => {
         });
     
         console.log(`Document has been deleted.`);
-        //window.location.reload();
+        window.location.reload();
       } catch (error) {
         console.error("Error deleting document:", error);
       }
@@ -300,7 +301,7 @@ const updateUserData = async (accessToken, account, transactions) => {
       } catch (error) {
         console.error("Error removing object:", error);
       }
-      //window.location.reload();
+      window.location.reload();
     };
 
  
@@ -462,10 +463,9 @@ const updateUserData = async (accessToken, account, transactions) => {
           <button class="button"
           onClick={() => {
             signOut(auth)
+            nav("/login")
           }}
-          >
-            <Link class = "edit_link"
-            to='/login'>LOG OUT</Link>
+          >LOG OUT
             
           </button>
         </div>
